@@ -10,7 +10,10 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'web:reddit-grid-redesign:v1.0' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; RedditRedesign/1.0)',
+        'Accept': 'application/json',
+      },
     });
 
     const contentType = response.headers.get('content-type') || 'application/json';
