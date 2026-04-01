@@ -71,36 +71,18 @@ export default function SubredditPage({ subreddit, onClose, onPostSelect }) {
 
   return (
     <div className="subreddit-page">
-      {/* Banner */}
-      <div className="subreddit-banner" style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}>
+      {/* Win2K Title Bar as Banner */}
+      <div className="subreddit-banner" style={{ background: 'var(--win-title)' }}>
         <div className="subreddit-banner-overlay" />
         <div className="subreddit-banner-actions">
-          <button className="subreddit-back" onClick={onClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <div className="subreddit-banner-right">
-            <button className="subreddit-header-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round">
-                <circle cx="11" cy="11" r="7" />
-                <line x1="16.5" y1="16.5" x2="21" y2="21" />
-              </svg>
-            </button>
-            <button className="subreddit-header-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-            </button>
-            <button className="subreddit-header-btn">
-              <svg viewBox="0 0 24 24" fill="#fff">
-                <circle cx="12" cy="5" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="19" r="1.5" />
-              </svg>
-            </button>
+          <span style={{ fontSize: '9px', color: 'var(--win-title-text)' }}>{icon}</span>
+          <span className="win-title-bar-text" style={{ flex: 1, margin: '0 6px', fontSize: 11, fontWeight: 700, fontFamily: 'Tahoma, Arial, sans-serif', color: 'var(--win-title-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sub} — Reddit
+          </span>
+          <div className="win-title-buttons">
+            <button className="win-title-btn" aria-label="Minimize">_</button>
+            <button className="win-title-btn" aria-label="Maximize">□</button>
+            <button className="win-title-btn" aria-label="Close" onClick={onClose} style={{ fontWeight: 900 }}>✕</button>
           </div>
         </div>
       </div>

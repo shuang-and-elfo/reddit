@@ -105,12 +105,7 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
             transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
           >
             <div className="post-detail-header">
-              <button className="post-detail-close" onClick={onClose}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-              </button>
-
+              <span className="post-detail-subreddit-icon" style={{ fontSize: 11 }}>{post.subredditIcon}</span>
               <div
                 className="post-detail-subreddit"
                 onClick={() => onSubredditSelect?.({
@@ -120,28 +115,15 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
                 })}
                 style={{ cursor: 'pointer' }}
               >
-                <span
-                  className="post-detail-subreddit-icon"
-                  style={{ background: post.subredditColor + '22', color: post.subredditColor }}
-                >
-                  {post.subredditIcon}
-                </span>
-                {post.subreddit}
+                {post.subreddit} — Reddit
               </div>
 
-              {isFollowing ? (
-                <button className="post-detail-join post-detail-join--joined">Joined</button>
-              ) : (
-                <button className="post-detail-join">Join</button>
-              )}
-
-              <button className="post-detail-share">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                  <polyline points="16 6 12 2 8 6" />
-                  <line x1="12" y1="2" x2="12" y2="15" />
-                </svg>
-              </button>
+              {/* Win2K title bar buttons */}
+              <div className="win-title-buttons">
+                <button className="win-title-btn" aria-label="Minimize">_</button>
+                <button className="win-title-btn" aria-label="Maximize">□</button>
+                <button className="win-title-btn" aria-label="Close" onClick={onClose} style={{ fontWeight: 900 }}>✕</button>
+              </div>
             </div>
 
             <div className="post-detail-scroll">

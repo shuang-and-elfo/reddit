@@ -231,22 +231,22 @@ export default function App() {
         <div className="status-bar">
           <span className="status-time">3:00</span>
           <span className="status-icons">
-            <svg width="15" height="10.5" viewBox="0 0 17 12" fill="#1A1A1B" style={{ position: 'relative', top: '1px' }}>
-              <rect x="0" y="4" width="3" height="8" rx="0.8" opacity="0.3"/>
-              <rect x="4.5" y="3" width="3" height="9" rx="0.8" opacity="0.5"/>
-              <rect x="9" y="1.5" width="3" height="10.5" rx="0.8" opacity="0.75"/>
-              <rect x="13.5" y="0" width="3" height="12" rx="0.8"/>
+            <svg width="15" height="10.5" viewBox="0 0 17 12" fill="#000000" style={{ position: 'relative', top: '1px' }}>
+              <rect x="0" y="4" width="3" height="8" rx="0" opacity="0.3"/>
+              <rect x="4.5" y="3" width="3" height="9" rx="0" opacity="0.5"/>
+              <rect x="9" y="1.5" width="3" height="10.5" rx="0" opacity="0.75"/>
+              <rect x="13.5" y="0" width="3" height="12" rx="0"/>
             </svg>
-            <svg width="16" height="12" viewBox="0 0 16 12" fill="#1A1A1B">
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="#000000">
               <path d="M8 2C5.8 2 3.7 2.9 2.2 4.4L0.8 3C2.7 1.1 5.2 0 8 0s5.3 1.1 7.2 3L13.8 4.4C12.3 2.9 10.2 2 8 2z" opacity="0.3"/>
               <path d="M8 5.5C6.5 5.5 5.1 6.1 4 7.2L2.6 5.8C4.1 4.3 6 3.5 8 3.5s3.9.8 5.4 2.3L12 7.2C10.9 6.1 9.5 5.5 8 5.5z" opacity="0.55"/>
               <path d="M8 9c-.8 0-1.6.3-2.1.9L4.5 8.5C5.4 7.6 6.7 7 8 7s2.6.6 3.5 1.5l-1.4 1.4C9.6 9.3 8.8 9 8 9z" opacity="0.8"/>
               <circle cx="8" cy="11" r="1.2"/>
             </svg>
             <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
-              <rect x="0.5" y="0.5" width="22" height="12" rx="3.5" stroke="#1A1A1B" strokeOpacity="0.35"/>
-              <rect x="2" y="2" width="16" height="9" rx="2" fill="#1A1A1B"/>
-              <path d="M24 4.5V8.5C25.1 8.1 25.1 4.9 24 4.5Z" fill="#1A1A1B" fillOpacity="0.4"/>
+              <rect x="0.5" y="0.5" width="22" height="12" rx="0" stroke="#000000" strokeOpacity="0.6"/>
+              <rect x="2" y="2" width="16" height="9" rx="0" fill="#000000"/>
+              <path d="M24 4.5V8.5C25.1 8.1 25.1 4.9 24 4.5Z" fill="#000000" fillOpacity="0.5"/>
             </svg>
           </span>
         </div>

@@ -22,8 +22,18 @@ export default function SearchTab({ onSubredditSelect }) {
 
   return (
     <div className="search-tab">
+      {/* Win2K Title Bar */}
+      <div className="win-title-bar" style={{ paddingTop: '48px', paddingBottom: '3px' }}>
+        <span style={{ fontSize: '9px', marginRight: '4px' }}>🔍</span>
+        <span className="win-title-bar-text">Search — Reddit</span>
+        <div className="win-title-buttons">
+          <button className="win-title-btn" aria-label="Minimize">_</button>
+          <button className="win-title-btn" aria-label="Maximize">□</button>
+          <button className="win-title-btn" aria-label="Close" style={{ fontWeight: 900 }}>✕</button>
+        </div>
+      </div>
       {/* Search bar */}
-      <div className="search-tab-bar">
+      <div className="search-tab-bar" style={{ paddingTop: '6px' }}>
         <div className={`search-input-wrap${focused ? ' focused' : ''}`}>
           <svg className="search-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="11" cy="11" r="7" />
