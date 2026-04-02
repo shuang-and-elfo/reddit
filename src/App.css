@@ -467,11 +467,11 @@
 }
 .community-join {
   width: 100%;
-  padding: 8px 0;
-  border: 1.5px solid var(--reddit-orange);
+  padding: 9px 0;
+  border: none;
   border-radius: 20px;
-  background: #fff;
-  color: var(--reddit-orange);
+  background: var(--reddit-orange);
+  color: #fff;
   font-size: 13px;
   font-weight: 700;
   font-family: inherit;
