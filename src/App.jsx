@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import TabBar from './components/TabBar';
 import InterestPills from './components/InterestPills';
@@ -15,7 +15,7 @@ import {
   followedSubreddits,
   interests,
 } from './data/posts';
-import { fetchRedditPosts, SOURCES, INTEREST_SOURCES } from './data/redditApi';
+import { fetchRedditPosts, fetchMoreRedditPosts, SOURCES, INTEREST_SOURCES } from './data/redditApi';
 
 const fallbackByTab = {
   explore: explorePosts,
@@ -53,21 +53,21 @@ const SPECIAL_TILES = [
     index: 4,
     post: {
       id: '__text_tile_1',
-      subreddit: 'r/SnapchatHelp',
-      subredditIcon: '👻',
-      subredditColor: '#FFFC00',
-      user: 'u/onthaBRINKofGR8',
-      timeAgo: '10h',
-      title: 'Does snapchat glitch?',
+      subreddit: 'r/NoStupidQuestions',
+      subredditIcon: '❓',
+      subredditColor: '#6B4EE6',
+      user: 'u/genuinely_curious_42',
+      timeAgo: '4h',
+      title: 'Why do we park in driveways but drive on parkways?',
       contentType: 'text',
-      upvotes: 28,
-      comments: 39,
-      body: 'This random girl added my husband on snapchat, she said they have been "In Touch" recently. Does snapchat ever glitch or is this legit?',
-      tags: ['tech'],
+      upvotes: 4120,
+      comments: 387,
+      body: 'Seriously though, who decided on these names? English is wild.',
+      tags: ['memes'],
       mockComments: [
-        { id: 'tc1', author: 'snap_support_unofficial', body: 'Snapchat doesn\'t add people randomly. If someone was added, it was done intentionally from one of the accounts.', ups: 45, timeAgo: '9h', isSubmitter: false, replies: [] },
-        { id: 'tc2', author: 'techie_truth', body: 'No, Snapchat does not glitch like that. Quick add suggests people based on contacts and mutual friends, but someone has to manually add them.', ups: 31, timeAgo: '8h', isSubmitter: false, replies: [{ id: 'tc2r1', author: 'onthaBRINKofGR8', body: 'That\'s what I was afraid of...', ups: 12, timeAgo: '7h', isSubmitter: true, replies: [] }] },
-        { id: 'tc3', author: 'digital_detective', body: 'Check his snap score over a few days. If it keeps going up but he\'s not snapping you, that tells you something.', ups: 28, timeAgo: '7h', isSubmitter: false, replies: [] },
+        { id: 'tc1', author: 'etymology_nerd', body: 'Driveway originally meant the path you "drove" up to reach your house from the road. Parkway meant a road through a park-like setting with trees.', ups: 892, timeAgo: '3h', isSubmitter: false, replies: [] },
+        { id: 'tc2', author: 'linguistics_prof', body: 'English borrows from so many languages that naming conventions are wildly inconsistent. This is one of the fun ones.', ups: 456, timeAgo: '2h', isSubmitter: false, replies: [{ id: 'tc2r1', author: 'genuinely_curious_42', body: 'That actually makes total sense. Thanks for the real answer!', ups: 120, timeAgo: '1h', isSubmitter: true, replies: [] }] },
+        { id: 'tc3', author: 'shower_thoughts_fan', body: 'Wait until you learn that we ship cargo by truck and send shipments by ship.', ups: 1340, timeAgo: '2h', isSubmitter: false, replies: [] },
       ],
     },
   },
@@ -93,30 +93,6 @@ const SPECIAL_TILES = [
         { title: 'Rain + fairy lights + tea = perfection' },
         { title: 'Converted a closet into a tiny office', image: 'https://picsum.photos/seed/cozy3/80/80' },
         { title: 'Fall vibes in the living room' },
-      ],
-    },
-  },
-  {
-    index: 7,
-    post: {
-      id: '__text_tile_2',
-      subreddit: 'r/AskReddit',
-      subredditIcon: '💬',
-      subredditColor: '#5A7EC2',
-      user: 'u/midnight_thoughts',
-      timeAgo: '3h',
-      title: 'What skill took you the longest to learn but was 100% worth it?',
-      contentType: 'text',
-      textBg: '#EEF2F7',
-      textAccent: '#5B7A9D',
-      upvotes: 8420,
-      comments: 2341,
-      body: 'What skill took you the longest to learn but was 100% worth it? For me it was learning to cook. Took years of burnt food and kitchen disasters but now I genuinely enjoy it.',
-      tags: ['news'],
-      mockComments: [
-        { id: 'ar1', author: 'lifelong_learner', body: 'Playing piano. Started at 25, didn\'t feel "good" until 30. Now it\'s the best stress relief I have.', ups: 1240, timeAgo: '2h', isSubmitter: false, replies: [{ id: 'ar1r1', author: 'keys_n_strings', body: 'Same here! I almost quit so many times in the first two years.', ups: 342, timeAgo: '1h', isSubmitter: false, replies: [] }] },
-        { id: 'ar2', author: 'code_and_coffee', body: 'Programming. The first 6 months were absolute misery. Now I build things that make my life easier every single day.', ups: 890, timeAgo: '2h', isSubmitter: false, replies: [] },
-        { id: 'ar3', author: 'midnight_thoughts', body: 'Loving all these answers. Seems like the common thread is pushing through that first year of feeling terrible at something.', ups: 567, timeAgo: '1h', isSubmitter: true, replies: [] },
       ],
     },
   },
@@ -166,12 +142,53 @@ const SPECIAL_TILES = [
   },
 ];
 
-const SPECIAL_IDS = new Set(SPECIAL_TILES.map((t) => t.post.id));
+const GAMING_TILES = [
+  {
+    index: 2,
+    post: {
+      id: '__game_bunny_trials',
+      subreddit: 'r/BunnyTrials',
+      subredditIcon: '🐰',
+      subredditColor: '#6C3FC5',
+      user: 'u/Genya_DM',
+      timeAgo: '4h',
+      title: 'Would you rather (Upvote please, I need those carrots)',
+      contentType: 'game',
+      upvotes: 350,
+      comments: 685,
+      body: '',
+      tags: ['gaming'],
+      game: {
+        type: 'wouldyourather',
+        prompt: 'Which side will you choose?',
+        totalVotes: 4537,
+        options: [
+          { id: 'a', emoji: '🐮', label: 'Talk to Animals' },
+          { id: 'b', emoji: '🛡️', label: 'Invincible vs Animals' },
+          { id: 'c', emoji: '🐸', label: 'Risk becoming a Frog' },
+          { id: 'd', emoji: '🦁', label: 'Except one Animal' },
+        ],
+        sides: {
+          left: { optionIds: ['a', 'c'], pct: 62 },
+          right: { optionIds: ['b', 'd'], pct: 38 },
+        },
+      },
+      mockComments: [
+        { id: 'bt1', author: 'bunny_gamer_42', body: 'Talk to animals easy pick. Imagine asking your dog what they actually want.', ups: 620, timeAgo: '3h', isSubmitter: false, replies: [{ id: 'bt1r1', author: 'Genya_DM', body: 'Right?! But the frog risk is real...', ups: 210, timeAgo: '2h', isSubmitter: true, replies: [] }] },
+        { id: 'bt2', author: 'shield_main', body: 'Invincible against ALL animal attacks? That includes mosquitoes. I pick right side every time.', ups: 445, timeAgo: '3h', isSubmitter: false, replies: [] },
+        { id: 'bt3', author: 'chaotic_neutral', body: 'Becoming a frog sounds like a win tbh. No rent, no taxes, just vibes at a pond.', ups: 890, timeAgo: '2h', isSubmitter: false, replies: [] },
+      ],
+    },
+  },
+];
 
-function injectSpecialTiles(posts) {
-  const result = posts.filter((p) => !SPECIAL_IDS.has(p.id));
-  for (const { index, post } of SPECIAL_TILES) {
-    result.splice(index, 0, post);
+const SPECIAL_IDS = new Set(SPECIAL_TILES.map((t) => t.post.id));
+const GAMING_IDS = new Set(GAMING_TILES.map((t) => t.post.id));
+
+function injectSpecialTiles(posts, tiles, ids) {
+  const result = posts.filter((p) => !ids.has(p.id));
+  for (const { index, post } of tiles) {
+    result.splice(Math.min(index, result.length), 0, post);
   }
   return result;
 }
@@ -184,32 +201,74 @@ export default function App() {
   const [tileOrigin, setTileOrigin] = useState(null);
   const [posts, setPosts] = useState(explorePosts);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [activeSubreddit, setActiveSubreddit] = useState(null);
+  const scrollRef = useRef(null);
+  const currentSourceRef = useRef('');
 
   const handleSubredditSelect = (sub) => {
     setActiveSubreddit(sub);
   };
 
+  const getSource = useCallback((tab, interest) => {
+    if (interest !== 'foryou' && INTEREST_SOURCES[interest]) {
+      return INTEREST_SOURCES[interest];
+    }
+    return SOURCES[tab] || SOURCES.explore;
+  }, []);
+
   const loadPosts = useCallback(async (tab, interest) => {
     setLoading(true);
+    const source = getSource(tab, interest);
+    currentSourceRef.current = source;
     try {
-      let source;
-      if (interest !== 'foryou' && INTEREST_SOURCES[interest]) {
-        source = INTEREST_SOURCES[interest];
-      } else {
-        source = SOURCES[tab] || SOURCES.explore;
-      }
       const data = await fetchRedditPosts(source);
-      const shouldInject = tab === 'explore' && interest === 'foryou';
-      setPosts(shouldInject ? injectSpecialTiles(data) : data);
+      if (tab === 'explore' && interest === 'foryou') {
+        setPosts(injectSpecialTiles(data, SPECIAL_TILES, SPECIAL_IDS));
+      } else if (interest === 'gaming') {
+        setPosts(injectSpecialTiles(data, GAMING_TILES, GAMING_IDS));
+      } else {
+        setPosts(data);
+      }
     } catch {
       const fallback = fallbackByTab[tab] || explorePosts;
-      const shouldInject = tab === 'explore' && interest === 'foryou';
-      setPosts(shouldInject ? injectSpecialTiles(fallback) : fallback);
+      if (tab === 'explore' && interest === 'foryou') {
+        setPosts(injectSpecialTiles(fallback, SPECIAL_TILES, SPECIAL_IDS));
+      } else if (interest === 'gaming') {
+        setPosts(injectSpecialTiles(fallback, GAMING_TILES, GAMING_IDS));
+      } else {
+        setPosts(fallback);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getSource]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore) return;
+    const source = currentSourceRef.current;
+    if (!source) return;
+    setLoadingMore(true);
+    try {
+      const newPosts = await fetchMoreRedditPosts(source);
+      if (newPosts.length > 0) {
+        setPosts((prev) => [...prev, ...newPosts]);
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingMore(false); }
+  }, [loadingMore]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+        loadMore();
+      }
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [loadMore]);
 
   useEffect(() => {
     loadPosts(activeTab, activeInterest);
@@ -269,7 +328,7 @@ export default function App() {
                   onInterestChange={setActiveInterest}
                 />
               )}
-              <div className="app-scroll">
+              <div className="app-scroll" ref={scrollRef}>
                 {loading ? (
                   <div className="feed-loading">
                     <div className="feed-loading-grid">
@@ -283,7 +342,10 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  <GridFeed posts={posts} onPostSelect={(post, rect) => { setTileOrigin(rect); setSelectedPost(post); }} onSubredditSelect={handleSubredditSelect} />
+                  <>
+                    <GridFeed posts={posts} onPostSelect={(post, rect) => { setTileOrigin(rect); setSelectedPost(post); }} onSubredditSelect={handleSubredditSelect} />
+                    {loadingMore && <div className="feed-loading-more"><div className="loading-spinner" /></div>}
+                  </>
                 )}
               </div>
               <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />

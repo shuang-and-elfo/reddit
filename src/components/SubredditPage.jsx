@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchRedditPosts } from '../data/redditApi';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { fetchRedditPosts, fetchMoreRedditPosts } from '../data/redditApi';
 import { myCommunitiesList, favoriteSubreddits, followedSubreddits } from '../data/posts';
 
 function formatCount(n) {
@@ -9,11 +9,6 @@ function formatCount(n) {
   return n.toString();
 }
 
-const SORT_TABS = [
-  { id: 'hot', label: 'Hot', icon: '🔥' },
-  { id: 'new', label: 'New', icon: '✨' },
-  { id: 'top', label: 'Top', icon: '📈' },
-];
 
 function resolveSubredditMeta(subredditName) {
   const cleanName = subredditName.replace(/^r\//, '');
@@ -27,8 +22,9 @@ function resolveSubredditMeta(subredditName) {
 export default function SubredditPage({ subreddit, onClose, onPostSelect }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeSort, setActiveSort] = useState('hot');
+  const [loadingMore, setLoadingMore] = useState(false);
   const [joined, setJoined] = useState(false);
+  const scrollRef = useRef(null);
 
   const sub = subreddit?.name || subreddit;
   const cleanName = sub?.replace(/^r\//, '') || '';
@@ -43,15 +39,14 @@ export default function SubredditPage({ subreddit, onClose, onPostSelect }) {
   const loadPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const sortPath = activeSort === 'hot' ? '' : `/${activeSort}`;
-      const data = await fetchRedditPosts(`r/${cleanName}${sortPath}`);
+      const data = await fetchRedditPosts(`r/${cleanName}`);
       setPosts(data);
     } catch {
       setPosts([]);
     } finally {
       setLoading(false);
     }
-  }, [cleanName, activeSort]);
+  }, [cleanName]);
 
   useEffect(() => {
     if (cleanName) loadPosts();
@@ -63,6 +58,30 @@ export default function SubredditPage({ subreddit, onClose, onPostSelect }) {
     );
     setJoined(isFollowed);
   }, [cleanName]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const newPosts = await fetchMoreRedditPosts(`r/${cleanName}`);
+      if (newPosts.length > 0) {
+        setPosts((prev) => [...prev, ...newPosts]);
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingMore(false); }
+  }, [cleanName, loadingMore]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+        loadMore();
+      }
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [loadMore]);
 
   const handlePostClick = (post, e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -128,22 +147,8 @@ export default function SubredditPage({ subreddit, onClose, onPostSelect }) {
         {description && <p className="subreddit-info-desc">{description}</p>}
       </div>
 
-      {/* Sort tabs */}
-      <div className="subreddit-sort-bar">
-        {SORT_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={`subreddit-sort-tab${activeSort === tab.id ? ' active' : ''}`}
-            onClick={() => setActiveSort(tab.id)}
-          >
-            <span className="subreddit-sort-icon">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* Feed */}
-      <div className="subreddit-feed-scroll">
+      <div className="subreddit-feed-scroll" ref={scrollRef}>
         {loading ? (
           <div className="subreddit-feed-loading">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -243,6 +248,7 @@ export default function SubredditPage({ subreddit, onClose, onPostSelect }) {
                 </div>
               </article>
             ))}
+            {loadingMore && <div className="feed-loading-more"><div className="loading-spinner" /></div>}
           </div>
         )}
       </div>

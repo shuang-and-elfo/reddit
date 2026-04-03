@@ -75,6 +75,10 @@ export default function SearchTab({ onSubredditSelect }) {
                       className="trending-pill"
                       onClick={() => setQuery(term)}
                     >
+                      <svg className="trending-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <circle cx="11" cy="11" r="7" />
+                        <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                      </svg>
                       {term}
                     </button>
                   ))}

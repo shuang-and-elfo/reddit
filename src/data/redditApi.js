@@ -93,13 +93,30 @@ function extractImage(post) {
   return null;
 }
 
+function extractGalleryImages(post) {
+  if (!post.is_gallery || !post.media_metadata) return null;
+
+  const order = post.gallery_data?.items?.map((item) => item.media_id)
+    || Object.keys(post.media_metadata);
+
+  const urls = order
+    .map((id) => {
+      const media = post.media_metadata[id];
+      if (media?.s?.u) return proxyImage(media.s.u);
+      if (media?.s?.gif) return proxyImage(media.s.gif);
+      return null;
+    })
+    .filter(Boolean);
+
+  return urls.length > 1 ? urls : null;
+}
+
 function mapPost(child) {
   const d = child.data;
   if (d.over_18 || d.stickied) return null;
 
   const image = extractImage(d);
-  if (!image) return null;
-
+  const images = extractGalleryImages(d);
   const sub = d.subreddit;
 
   return {
@@ -111,6 +128,8 @@ function mapPost(child) {
     timeAgo: timeAgo(d.created_utc),
     title: d.title,
     image,
+    images,
+    contentType: image ? undefined : 'text',
     upvotes: d.ups,
     comments: d.num_comments,
     body: d.selftext || '',
@@ -119,6 +138,7 @@ function mapPost(child) {
 }
 
 const cache = {};
+const afterTokens = {};
 
 export async function fetchRedditPosts(source, limit = 50) {
   if (cache[source]) return cache[source];
@@ -134,7 +154,31 @@ export async function fetchRedditPosts(source, limit = 50) {
     .filter(Boolean);
 
   cache[source] = posts;
+  afterTokens[source] = json.data.after || null;
   return posts;
+}
+
+export async function fetchMoreRedditPosts(source, limit = 25) {
+  const after = afterTokens[source];
+  if (!after) return [];
+
+  const url = `/reddit-api/${source}.json?limit=${limit}&after=${after}&raw_json=1`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Reddit API ${res.status}`);
+  const json = await res.json();
+
+  const posts = json.data.children
+    .filter((c) => c.kind === 't3')
+    .map(mapPost)
+    .filter(Boolean);
+
+  const existing = cache[source] || [];
+  const existingIds = new Set(existing.map((p) => p.id));
+  const newPosts = posts.filter((p) => !existingIds.has(p.id));
+
+  cache[source] = [...existing, ...newPosts];
+  afterTokens[source] = json.data.after || null;
+  return newPosts;
 }
 
 const commentsCache = {};
@@ -159,7 +203,7 @@ function mapComment(child) {
   };
 }
 
-export async function fetchComments(subreddit, postId, limit = 5) {
+export async function fetchComments(subreddit, postId, limit = 20) {
   const key = `${subreddit}/${postId}`;
   if (commentsCache[key]) return commentsCache[key];
 

@@ -1,11 +1,145 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchComments } from '../data/redditApi';
+
+function ImageCarousel({ images }) {
+  const [current, setCurrent] = useState(0);
+  const trackRef = useRef(null);
+  const touchStart = useRef(null);
+  const touchDelta = useRef(0);
+  const dragging = useRef(false);
+
+  const goTo = useCallback((idx) => {
+    setCurrent(Math.max(0, Math.min(idx, images.length - 1)));
+  }, [images.length]);
+
+  const handleTouchStart = (e) => {
+    touchStart.current = e.touches[0].clientX;
+    dragging.current = true;
+    touchDelta.current = 0;
+    if (trackRef.current) trackRef.current.style.transition = 'none';
+  };
+
+  const handleTouchMove = (e) => {
+    if (!dragging.current || touchStart.current === null) return;
+    touchDelta.current = e.touches[0].clientX - touchStart.current;
+    if (trackRef.current) {
+      const offset = -(current * 100) + (touchDelta.current / trackRef.current.parentElement.offsetWidth) * 100;
+      trackRef.current.style.transform = `translateX(${offset}%)`;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    dragging.current = false;
+    if (trackRef.current) trackRef.current.style.transition = '';
+    const threshold = 50;
+    if (touchDelta.current < -threshold) goTo(current + 1);
+    else if (touchDelta.current > threshold) goTo(current - 1);
+    else goTo(current);
+    touchStart.current = null;
+    touchDelta.current = 0;
+  };
+
+  useEffect(() => {
+    if (trackRef.current) {
+      trackRef.current.style.transform = `translateX(-${current * 100}%)`;
+    }
+  }, [current]);
+
+  return (
+    <div className="carousel">
+      <div
+        className="carousel-viewport"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="carousel-track" ref={trackRef}>
+          {images.map((src, i) => (
+            <img
+              key={i}
+              className="carousel-slide"
+              src={src}
+              alt=""
+              loading={i === 0 ? 'eager' : 'lazy'}
+              draggable={false}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="carousel-counter">{current + 1} / {images.length}</div>
+      <div className="carousel-dots">
+        {images.map((_, i) => (
+          <span
+            key={i}
+            className={`carousel-dot${i === current ? ' carousel-dot--active' : ''}`}
+            onClick={() => goTo(i)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GameCard({ game }) {
+  const [selected, setSelected] = useState(null);
+
+  const handlePick = (id) => {
+    if (selected) return;
+    setSelected(id);
+  };
+
+  return (
+    <div className="game-card">
+      <div className="game-card-header">
+        <span className="game-card-prompt">{game.prompt}</span>
+      </div>
+      <div className="game-grid">
+        {game.options.map((opt) => (
+          <div
+            key={opt.id}
+            className={`game-cell${selected === opt.id ? ' game-cell--picked' : ''}${selected && selected !== opt.id ? ' game-cell--dimmed' : ''}`}
+            onClick={() => handlePick(opt.id)}
+          >
+            <span className="game-cell-emoji">{opt.emoji}</span>
+            <span className="game-cell-label">{opt.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="game-card-footer">
+        <span className="game-vote-count">{game.totalVotes.toLocaleString()} votes</span>
+        {!selected && <span className="game-cta">Tap to see what others picked</span>}
+        {selected && <span className="game-cta game-cta--revealed">Thanks for voting!</span>}
+      </div>
+    </div>
+  );
+}
 
 function formatCount(n) {
   if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   return n.toString();
+}
+
+function CommentBody({ text }) {
+  const parts = text.split(/(!\[(?:img|image)?\]\([^)]+\))/g);
+  const imgPattern = /^!\[(?:img|image)?\]\(([^)]+)\)$/;
+
+  const elements = parts.map((part, i) => {
+    const match = part.match(imgPattern);
+    if (match) {
+      const url = match[1].startsWith('/reddit-media/')
+        ? match[1]
+        : (match[1].includes('redd.it') || match[1].includes('redditmedia.com'))
+          ? '/reddit-media/' + encodeURIComponent(match[1])
+          : match[1];
+      return <img key={i} src={url} alt="" className="comment-inline-img" loading="lazy" />;
+    }
+    if (!part) return null;
+    return <span key={i}>{part}</span>;
+  });
+
+  return <div className="comment-text">{elements}</div>;
 }
 
 const AVATAR_POOL = ['🧑', '👩', '🧔', '👱', '🧑‍💻', '👩‍🦰', '🧑‍🎤', '👨‍🔬', '👩‍💼', '🧑‍🚀'];
@@ -70,7 +204,7 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
     setLoadingComments(true);
     setComments([]);
 
-    fetchComments(post.subreddit, post.id, 5)
+    fetchComments(post.subreddit, post.id, 20)
       .then((data) => {
         if (!cancelled) setComments(data);
       })
@@ -155,6 +289,8 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
                   playsInline
                   loop
                 />
+              ) : post.images?.length > 1 ? (
+                <ImageCarousel images={post.images} />
               ) : post.image ? (
                 <img
                   className="post-detail-image"
@@ -163,8 +299,10 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
                 />
               ) : null}
               <div className="post-detail-body">
+                {post.contentType === 'game' && <span className="post-detail-game-tag">🎮 GAME</span>}
                 <div className="post-detail-user">{post.user} &middot; {post.timeAgo}</div>
                 <h1 className="post-detail-title">{post.title}</h1>
+                {post.game && <GameCard game={post.game} />}
                 {post.body && <p className="post-detail-text">{post.body}</p>}
 
                 <div className="post-detail-comments-section">
@@ -188,7 +326,7 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
                             {c.isSubmitter && <span className="comment-author-tag">OP</span>}
                             <span className="comment-time">{c.timeAgo}</span>
                           </div>
-                          <p className="comment-text">{c.body}</p>
+                          <CommentBody text={c.body} />
                           <div className="comment-actions">
                             <span className="comment-action">Reply</span>
                             <span className="comment-likes">
@@ -210,7 +348,7 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
                                       {r.isSubmitter && <span className="comment-author-tag">OP</span>}
                                       <span className="comment-time">{r.timeAgo}</span>
                                     </div>
-                                    <p className="comment-text">{r.body}</p>
+                                    <CommentBody text={r.body} />
                                     <div className="comment-actions">
                                       <span className="comment-action">Reply</span>
                                       <span className="comment-likes">
@@ -236,7 +374,11 @@ export default function PostDetail({ post, onClose, isFollowing, tileOrigin, onS
             </div>
 
             <div className="post-detail-input-bar">
-              <div className="input-bar-field">Join the conversation</div>
+              <input
+                className="input-bar-field"
+                placeholder="Join the conversation"
+                readOnly={false}
+              />
               <div className="input-bar-engagement">
                 <span className="engagement-item">
                   <img src="/icons/upvote-arrow.png" alt="Upvote" className="upvote-arrow-icon" />

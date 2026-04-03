@@ -72,7 +72,11 @@ function formatMembers(n) {
   return n.toString();
 }
 
+import { useState } from 'react';
+
 export default function GridTile({ post, imageHeight, onClick, onSubredditSelect }) {
+  const [joined, setJoined] = useState(false);
+
   const handleClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     onClick(rect);
@@ -81,6 +85,29 @@ export default function GridTile({ post, imageHeight, onClick, onSubredditSelect
   const isVideo = post.contentType === 'video';
   const isText = post.contentType === 'text';
   const isCommunity = post.contentType === 'community';
+  const isGame = post.contentType === 'game';
+
+  if (isGame) {
+    const game = post.game;
+    return (
+      <div className="grid-tile grid-tile--game" onClick={handleClick}>
+        <div className="tile-game-body">
+          <span className="tile-game-tag">GAME</span>
+          <p className="tile-game-prompt">{game.prompt}</p>
+          <div className="tile-game-grid">
+            {game.options.slice(0, 4).map((opt) => (
+              <span key={opt.id} className="tile-game-cell"><span className="tile-game-cell-emoji">{opt.emoji}</span>{opt.label}</span>
+            ))}
+          </div>
+          <span className="tile-game-votes">{game.totalVotes.toLocaleString()} votes</span>
+        </div>
+        <div className="tile-content">
+          <div className="tile-title">{post.title}</div>
+          <TileMeta post={post} />
+        </div>
+      </div>
+    );
+  }
 
   if (isCommunity) {
     const handleCommunityClick = () => {
@@ -102,8 +129,12 @@ export default function GridTile({ post, imageHeight, onClick, onSubredditSelect
         <span className="community-name">{post.subreddit}</span>
         <span className="community-members">{formatMembers(post.members)} members</span>
         <p className="community-tagline">{post.tagline}</p>
-        <button className="community-join" onClick={(e) => e.stopPropagation()}>
-          Join
+        <button
+          className={`community-join${joined ? ' community-join--joined' : ''}`}
+          style={joined ? {} : { background: post.subredditColor }}
+          onClick={(e) => { e.stopPropagation(); setJoined(!joined); }}
+        >
+          {joined ? 'Joined' : 'Join'}
         </button>
       </div>
     );
@@ -113,14 +144,39 @@ export default function GridTile({ post, imageHeight, onClick, onSubredditSelect
     const colors = pickTextColor(post.id);
     const bg = post.textBg || colors.bg;
     const accent = post.textAccent || colors.accent;
-    const text = truncateAtSentence(post.body || post.title, 120);
+    const text = post.title;
+    const len = text.length;
+    const fontSize = len < 30 ? 22 : len < 60 ? 18 : len < 100 ? 16 : 15;
     return (
       <div className="grid-tile grid-tile--text" onClick={handleClick}>
         <div className="tile-text-body" style={{ background: bg }}>
           <span className="tile-text-tag" style={{ color: accent }}>
             {post.subredditIcon} {post.subreddit}
           </span>
-          <p className="tile-text-content">{text}</p>
+          <p className="tile-text-content" style={{ fontSize }}>{text}</p>
+        </div>
+        <div className="tile-content">
+          <TileMeta post={post} />
+        </div>
+      </div>
+    );
+  }
+
+  const [imgError, setImgError] = useState(false);
+
+  if (!post.image || imgError) {
+    const colors = pickTextColor(post.id);
+    const bg = colors.bg;
+    const accent = colors.accent;
+    const len = post.title.length;
+    const fontSize = len < 30 ? 22 : len < 60 ? 18 : len < 100 ? 16 : 15;
+    return (
+      <div className="grid-tile grid-tile--text" onClick={handleClick}>
+        <div className="tile-text-body" style={{ background: bg }}>
+          <span className="tile-text-tag" style={{ color: accent }}>
+            {post.subredditIcon} {post.subreddit}
+          </span>
+          <p className="tile-text-content" style={{ fontSize }}>{post.title}</p>
         </div>
         <div className="tile-content">
           <TileMeta post={post} />
@@ -138,6 +194,7 @@ export default function GridTile({ post, imageHeight, onClick, onSubredditSelect
           alt=""
           style={{ height: imageHeight }}
           loading="lazy"
+          onError={() => setImgError(true)}
         />
         {isVideo && (
           <>
