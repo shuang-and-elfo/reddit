@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/reddit-media/:url(.*)", "destination": "/api/reddit-media?url=:url" },
-    { "source": "/reddit-api/:path(.*)", "destination": "/api/reddit-proxy?path=:path" }
+    { "source": "/reddit-api/:path(.*)", "destination": "/api/reddit-proxy?path=:path" },
+    { "source": "/api/ask", "destination": "/api/ask" }
   ]
 }

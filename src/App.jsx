@@ -8,6 +8,7 @@ import PostDetail from './components/PostDetail';
 import BottomNav from './components/BottomNav';
 import SearchTab from './components/SearchTab';
 import SubredditPage from './components/SubredditPage';
+import CreatePost from './components/CreatePost';
 import {
   explorePosts,
   followingPosts,
@@ -203,6 +204,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activeSubreddit, setActiveSubreddit] = useState(null);
+  const [showCreatePost, setShowCreatePost] = useState(false);
   const scrollRef = useRef(null);
   const currentSourceRef = useRef('');
 
@@ -312,8 +314,8 @@ export default function App() {
         <div className="app">
           {activeNav === 'search' ? (
             <>
-              <SearchTab onSubredditSelect={handleSubredditSelect} />
-              <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
+              <SearchTab onSubredditSelect={handleSubredditSelect} onPostSelect={(post) => { setSelectedPost(post); }} />
+              <BottomNav activeNav={activeNav} onNavChange={setActiveNav} onCreateClick={() => setShowCreatePost(true)} />
             </>
           ) : (
             <>
@@ -348,16 +350,17 @@ export default function App() {
                   </>
                 )}
               </div>
-              <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
-              <PostDetail
-                post={selectedPost}
-                onClose={() => setSelectedPost(null)}
-                isFollowing={activeTab === 'following'}
-                tileOrigin={tileOrigin}
-                onSubredditSelect={handleSubredditSelect}
-              />
+              <BottomNav activeNav={activeNav} onNavChange={setActiveNav} onCreateClick={() => setShowCreatePost(true)} />
             </>
           )}
+          <CreatePost visible={showCreatePost} onClose={() => setShowCreatePost(false)} onPostSelect={(post) => { setSelectedPost(post); }} />
+          <PostDetail
+            post={selectedPost}
+            onClose={() => setSelectedPost(null)}
+            isFollowing={activeTab === 'following'}
+            tileOrigin={tileOrigin}
+            onSubredditSelect={handleSubredditSelect}
+          />
           {activeSubreddit && (
             <SubredditPage
               subreddit={activeSubreddit}

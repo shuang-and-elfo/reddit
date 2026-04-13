@@ -1,10 +1,24 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { trendingSearches, favoriteSubreddits, myCommunitiesList } from '../data/posts';
+import { searchRedditAutocomplete } from '../data/redditApi';
+import SearchResults from './SearchResults';
 
-export default function SearchTab({ onSubredditSelect }) {
+function formatMembers(count) {
+  if (!count) return '';
+  if (count >= 1_000_000) return (count / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'm members';
+  if (count >= 1_000) return Math.floor(count / 1_000) + 'k members';
+  return count + ' members';
+}
+
+export default function SearchTab({ onSubredditSelect, onPostSelect }) {
   const [query, setQuery] = useState('');
+  const [askQuery, setAskQuery] = useState(null);
   const inputRef = useRef(null);
   const [focused, setFocused] = useState(false);
+
+  const [liveSubreddits, setLiveSubreddits] = useState([]);
+  const [loadingLive, setLoadingLive] = useState(false);
+  const debounceRef = useRef(null);
 
   const filteredCommunities = query
     ? myCommunitiesList.filter(c =>
@@ -18,7 +32,70 @@ export default function SearchTab({ onSubredditSelect }) {
       )
     : favoriteSubreddits;
 
-  const showEmpty = query && filteredCommunities.length === 0 && filteredFavorites.length === 0;
+  const fetchAutocomplete = useCallback((q) => {
+    if (!q || q.length < 2) {
+      setLiveSubreddits([]);
+      setLoadingLive(false);
+      return;
+    }
+    setLoadingLive(true);
+    searchRedditAutocomplete(q).then(result => {
+      setLiveSubreddits(result.subreddits);
+      setLoadingLive(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query.trim()) {
+      setLiveSubreddits([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => fetchAutocomplete(query.trim()), 250);
+    return () => clearTimeout(debounceRef.current);
+  }, [query, fetchAutocomplete]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && query.trim()) {
+      e.preventDefault();
+      setAskQuery(query.trim());
+      inputRef.current?.blur();
+    }
+  };
+
+  const handleAsk = () => {
+    if (query.trim()) {
+      setAskQuery(query.trim());
+      inputRef.current?.blur();
+    }
+  };
+
+  const handleSubredditClick = (sub) => {
+    onSubredditSelect?.({
+      id: sub.id,
+      name: sub.name,
+      icon: sub.icon || sub.displayName.charAt(0).toUpperCase(),
+      color: sub.color,
+      members: sub.members || '',
+    });
+  };
+
+  if (askQuery) {
+    return (
+      <SearchResults
+        query={askQuery}
+        onBack={() => setAskQuery(null)}
+        onPostSelect={onPostSelect}
+        onSubredditSelect={onSubredditSelect}
+      />
+    );
+  }
+
+  const hasQuery = query.trim().length > 0;
+  const hasLiveResults = liveSubreddits.length > 0;
+  const hasLocalResults = filteredCommunities.length > 0 || filteredFavorites.length > 0;
+  const showLiveResults = hasQuery && (hasLiveResults || loadingLive);
+  const showNoResults = hasQuery && !hasLiveResults && !hasLocalResults && !loadingLive;
 
   return (
     <div className="search-tab">
@@ -38,9 +115,10 @@ export default function SearchTab({ onSubredditSelect }) {
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
+            onKeyDown={handleKeyDown}
           />
           {query && (
-            <button className="search-clear" onClick={() => { setQuery(''); inputRef.current?.focus(); }}>
+            <button className="search-clear" onClick={() => { setQuery(''); setLiveSubreddits([]); inputRef.current?.focus(); }}>
               <svg viewBox="0 0 20 20" fill="currentColor">
                 <circle cx="10" cy="10" r="10" opacity="0.12" />
                 <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
@@ -51,40 +129,128 @@ export default function SearchTab({ onSubredditSelect }) {
       </div>
 
       <div className="search-tab-scroll">
-        {showEmpty ? (
-          <div className="search-no-results">
-            <span className="search-no-results-icon">🔍</span>
-            <p>No results for "{query}"</p>
-          </div>
+        {hasQuery ? (
+          <>
+            {/* Search suggestions — show query as a tappable search row */}
+            <div className="search-live-section">
+              <button className="search-suggestion-row" onMouseDown={e => { e.preventDefault(); setAskQuery(query.trim()); }}>
+                <svg className="search-suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                </svg>
+                <span className="search-suggestion-text">{query}</span>
+              </button>
+            </div>
+
+            {/* Live subreddit results from Reddit API */}
+            {showLiveResults && (
+              <div className="search-live-section">
+                <div className="search-live-label">Communities</div>
+                {liveSubreddits.map(sub => (
+                  <button
+                    key={sub.id}
+                    className="search-live-row"
+                    onMouseDown={e => { e.preventDefault(); handleSubredditClick(sub); }}
+                  >
+                    <div className="search-live-icon">
+                      {sub.iconUrl ? (
+                        <img
+                          src={sub.iconUrl}
+                          alt=""
+                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                        />
+                      ) : null}
+                      <div
+                        className="search-live-icon-fallback"
+                        style={{ background: sub.color, display: sub.iconUrl ? 'none' : 'flex' }}
+                      >
+                        {sub.icon || sub.displayName.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="search-live-info">
+                      <span className="search-live-name">{sub.name}</span>
+                      <span className="search-live-meta">
+                        {sub.activeUsers || (sub.members ? sub.members + ' members' : '')}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Local communities matching query */}
+            {filteredFavorites.length > 0 && (
+              <div className="search-live-section">
+                <div className="search-live-label">Your Favorites</div>
+                {filteredFavorites.map(sub => (
+                  <button key={sub.id} className="search-live-row" onMouseDown={e => { e.preventDefault(); onSubredditSelect?.(sub); }}>
+                    <div className="search-live-icon">
+                      <div className="search-live-icon-fallback" style={{ background: sub.color }}>
+                        {sub.icon}
+                      </div>
+                    </div>
+                    <div className="search-live-info">
+                      <span className="search-live-name">{sub.name}</span>
+                      <span className="search-live-meta">{sub.members}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {filteredCommunities.length > 0 && (
+              <div className="search-live-section">
+                <div className="search-live-label">Your Communities</div>
+                {filteredCommunities.map(sub => (
+                  <button key={sub.id} className="search-live-row" onMouseDown={e => { e.preventDefault(); onSubredditSelect?.(sub); }}>
+                    <div className="search-live-icon">
+                      <div className="search-live-icon-fallback" style={{ background: sub.color }}>
+                        {sub.icon}
+                      </div>
+                    </div>
+                    <div className="search-live-info">
+                      <span className="search-live-name">{sub.name}</span>
+                      <span className="search-live-meta">{sub.members} members</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showNoResults && (
+              <div className="search-no-results">
+                <span className="search-no-results-icon">🔍</span>
+                <p>No results for "{query}"</p>
+              </div>
+            )}
+          </>
         ) : (
           <>
             {/* Trending */}
-            {!query && (
-              <section className="search-section">
-                <div className="search-section-header">
-                  <svg className="search-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                    <polyline points="17 6 23 6 23 12" />
-                  </svg>
-                  <h3>Trending</h3>
-                </div>
-                <div className="trending-pills">
-                  {trendingSearches.map(term => (
-                    <button
-                      key={term}
-                      className="trending-pill"
-                      onClick={() => setQuery(term)}
-                    >
-                      <svg className="trending-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <circle cx="11" cy="11" r="7" />
-                        <line x1="16.5" y1="16.5" x2="21" y2="21" />
-                      </svg>
-                      {term}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
+            <section className="search-section">
+              <div className="search-section-header">
+                <svg className="search-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </svg>
+                <h3>Trending</h3>
+              </div>
+              <div className="trending-pills">
+                {trendingSearches.map(term => (
+                  <button
+                    key={term}
+                    className="trending-pill"
+                    onClick={() => setQuery(term)}
+                  >
+                    <svg className="trending-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                    </svg>
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </section>
 
             {/* Favorites */}
             {filteredFavorites.length > 0 && (

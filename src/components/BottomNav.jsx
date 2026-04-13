@@ -1,4 +1,4 @@
-export default function BottomNav({ activeNav = 'home', onNavChange }) {
+export default function BottomNav({ activeNav = 'home', onNavChange, onCreateClick }) {
   return (
     <nav className="bottom-nav">
       <button
@@ -20,7 +20,7 @@ export default function BottomNav({ activeNav = 'home', onNavChange }) {
         <span>Search</span>
       </button>
 
-      <button className="nav-create">
+      <button className="nav-create" onClick={() => onCreateClick?.()}>
         <div className="nav-create-inner">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />
